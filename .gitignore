@@ -1,34 +1,34 @@
-# C++Builder build output directories
-Win32/
-Win64/
+/target
 
-# C++Builder compiled artifacts
+# C++Builder/RAD Studio build outputs
+**/Win32/Debug/
+**/Win32/Release/
+**/Win64/Debug/
+**/Win64/Release/
+
+# Object and binary artifacts
 *.obj
-*.pch
-*.tds
-*.map
+*.o
 *.exe
 *.dll
-
-# C++Builder resource compiled output
-*.res
-
-# C++Builder incremental linker files
+*.map
 *.ilc
 *.ild
 *.ilf
 *.ils
-
-# C++Builder misc
+*.pch
+*.pdi
+*.tds
 *.#00
-*.local
 
-# Delphi/C++Builder backup files
-*.~*
+# IDE/user-local project files
+*.cbproj.local
 
-# Keep only the distributable example binary in source control
+# RAD Studio local history folders
+**/__history/
+
+# Keep distributable example executables tracked
 !sig-net-example-tid-level-tx/Win32/
-sig-net-example-tid-level-tx/Win32/*
 !sig-net-example-tid-level-tx/Win32/Debug/
 sig-net-example-tid-level-tx/Win32/Debug/*
 !sig-net-example-tid-level-tx/Win32/Debug/*.exe
