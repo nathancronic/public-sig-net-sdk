@@ -36,8 +36,25 @@
 #include "sig-net-constants.hpp"
 #include "sig-net-types.hpp"
 #include <stdint.h>
+#include <string.h>
 
 namespace SigNet {
+
+//------------------------------------------------------------------------------
+// Portable secure memory wipe - prevents compiler from optimising away the
+// zeroing of buffers that contain key material or other secrets.
+//
+// Windows: SecureZeroMemory (guaranteed not to be optimised out)
+// POSIX:   explicit_bzero  (POSIX.1-2017 / glibc 2.25+)
+//------------------------------------------------------------------------------
+inline void SecureZero(void* ptr, size_t len) {
+#ifdef _WIN32
+    SecureZeroMemory(ptr, len);
+#else
+    explicit_bzero(ptr, len);
+#endif
+}
+
 namespace Crypto {
 
 //------------------------------------------------------------------------------
