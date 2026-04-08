@@ -27,7 +27,7 @@
 // Date:         March 28, 2026
 // Description:  Cryptographic primitives: HMAC-SHA256 (RFC 2104), HKDF-Expand
 //               (RFC 5869), and key derivation for Sender, Citizen, Manager.
-//               Uses Windows BCrypt API (no external dependencies).
+//               Windows: BCrypt API. POSIX: OpenSSL.
 //==============================================================================
 
 #ifndef SIGNET_CRYPTO_HPP

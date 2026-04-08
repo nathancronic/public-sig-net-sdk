@@ -32,3 +32,6 @@
 !sig-net-example-tid-level-tx/Win32/Debug/
 sig-net-example-tid-level-tx/Win32/Debug/*
 !sig-net-example-tid-level-tx/Win32/Debug/*.exe
+
+
+build/

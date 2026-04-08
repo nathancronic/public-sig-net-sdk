@@ -25,19 +25,28 @@
 //==============================================================================
 // Author:       Wayne Howell
 // Date:         March 28, 2026
-// Description:  Implementation of cryptographic functions using Windows BCrypt.
-//               HMAC-SHA256, HKDF-Expand, and key derivation for Sig-Net.
-//               No external dependencies (uses Windows CryptoAPI).
+// Description:  Implementation of cryptographic functions for Sig-Net.
+//               HMAC-SHA256, HKDF-Expand, PBKDF2, and key derivation.
+//               Windows: uses BCrypt API (bcrypt.lib).
+//               POSIX:   uses OpenSSL (link with -lssl -lcrypto).
 //==============================================================================
 
 #include "sig-net-crypto.hpp"
 #include <string.h>
 #include <stdio.h>
 
-// Windows CryptoAPI (BCrypt)
-#include <windows.h>
-#include <bcrypt.h>
-// Note: Link against bcrypt.lib in project settings
+// Platform-specific cryptographic backends
+#ifdef _WIN32
+  #include <windows.h>
+  #include <bcrypt.h>
+  // Note: Link against bcrypt.lib in project settings
+#else
+  #include <openssl/hmac.h>
+  #include <openssl/evp.h>
+  #include <openssl/rand.h>
+  #include <openssl/kdf.h>
+  // Note: Link against -lssl -lcrypto
+#endif
 
 namespace SigNet {
 namespace Crypto {
@@ -55,7 +64,8 @@ int32_t HMAC_SHA256(
     if (!key || !message || !output) {
         return SIGNET_ERROR_INVALID_ARG;
     }
-    
+
+#ifdef _WIN32
     BCRYPT_ALG_HANDLE hAlg = NULL;
     BCRYPT_HASH_HANDLE hHash = NULL;
     NTSTATUS status;
@@ -115,6 +125,21 @@ int32_t HMAC_SHA256(
     BCryptCloseAlgorithmProvider(hAlg, 0);
     
     return BCRYPT_SUCCESS(status) ? SIGNET_SUCCESS : SIGNET_ERROR_CRYPTO;
+#else
+    unsigned int out_len = 0;
+    unsigned char* result = ::HMAC(
+        EVP_sha256(),
+        key, key_len,
+        message, msg_len,
+        output, &out_len
+    );
+
+    if (!result || out_len != HMAC_SHA256_LENGTH) {
+        return SIGNET_ERROR_CRYPTO;
+    }
+
+    return SIGNET_SUCCESS;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -367,7 +392,8 @@ int32_t DeriveK0FromPassphrase(
     if (!passphrase || passphrase_len == 0 || !k0_output) {
         return SIGNET_ERROR_INVALID_ARG;
     }
-    
+
+#ifdef _WIN32
     BCRYPT_ALG_HANDLE hAlg = NULL;
     NTSTATUS status;
     
@@ -401,7 +427,23 @@ int32_t DeriveK0FromPassphrase(
     if (!BCRYPT_SUCCESS(status)) {
         return SIGNET_ERROR_CRYPTO;
     }
-    
+#else
+    int result = PKCS5_PBKDF2_HMAC(
+        passphrase,
+        passphrase_len,
+        (const unsigned char*)PBKDF2_SALT,
+        strlen(PBKDF2_SALT),
+        PBKDF2_ITERATIONS,
+        EVP_sha256(),
+        K0_KEY_LENGTH,
+        k0_output
+    );
+
+    if (result != 1) {
+        return SIGNET_ERROR_CRYPTO;
+    }
+#endif
+
     return SIGNET_SUCCESS;
 }
 
@@ -420,8 +462,9 @@ int32_t GenerateRandomPassphrase(char* passphrase_output, uint32_t buffer_size) 
     const int digit_len = strlen(PASSPHRASE_GEN_DIGITS);
     const int symbol_len = strlen(PASSPHRASE_GEN_SYMBOLS);
     
-    // Generate random bytes using BCrypt
+    // Generate random bytes
     uint8_t random_bytes[PASSPHRASE_GENERATED_LENGTH];
+#ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(
         NULL,
         random_bytes,
@@ -432,6 +475,11 @@ int32_t GenerateRandomPassphrase(char* passphrase_output, uint32_t buffer_size) 
     if (!BCRYPT_SUCCESS(status)) {
         return SIGNET_ERROR_CRYPTO;
     }
+#else
+    if (RAND_bytes(random_bytes, PASSPHRASE_GENERATED_LENGTH) != 1) {
+        return SIGNET_ERROR_CRYPTO;
+    }
+#endif
     
     // Build passphrase ensuring at least 3 character classes
     // Force first 3 characters to be from different classes
@@ -492,6 +540,7 @@ int32_t GenerateRandomK0(uint8_t* k0_output) {
         return SIGNET_ERROR_INVALID_ARG;
     }
 
+#ifdef _WIN32
     NTSTATUS status = BCryptGenRandom(
         NULL,
         k0_output,
@@ -502,6 +551,11 @@ int32_t GenerateRandomK0(uint8_t* k0_output) {
     if (!BCRYPT_SUCCESS(status)) {
         return SIGNET_ERROR_CRYPTO;
     }
+#else
+    if (RAND_bytes(k0_output, 32) != 1) {
+        return SIGNET_ERROR_CRYPTO;
+    }
+#endif
 
     return SIGNET_SUCCESS;
 }
