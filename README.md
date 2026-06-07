@@ -146,7 +146,7 @@ int32_t result = BuildDMXPacket(
     dmx_data,
     512,          // slot count
     tuid,
-    0,            // endpoint
+    1,            // endpoint
     0x0000,       // manufacturer code (0 = standard)
     session_id,
     seq_num,
