@@ -436,6 +436,10 @@ namespace {
         return -1;
     }
     bool HexDecode(const char* hex, uint8_t* out, size_t out_len) {
+        // A short or null vector string must fail cleanly, not read past the end.
+        if (!hex || !out || strlen(hex) != out_len * 2) {
+            return false;
+        }
         for (size_t i = 0; i < out_len; ++i) {
             int hi = HexNibbleVal(hex[2*i]);
             int lo = HexNibbleVal(hex[2*i + 1]);
